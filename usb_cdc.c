@@ -28,7 +28,7 @@
 #define NULL ((void*)0)
 #endif
 
-static const struct usb_device_descriptor dev = {
+static const struct usb_device_descriptor dev __attribute__ ((aligned (4))) = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
