@@ -28,8 +28,6 @@
 #define NULL ((void*)0)
 #endif
 
-extern const usbd_driver stm32l0x2_usb_driver;
-
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
@@ -244,9 +242,7 @@ static usbd_device *usbd_dev;
 
 void usb_init(void) {
 	rcc_periph_clock_enable(RCC_USB);
-	//volatile usbd_driver *dr = &stm32l0x2_usb_driver;
-	//usbd_driver *driver = (usbd_driver *)0x20000068;
-	usbd_dev = usbd_init(&stm32l0x2_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbd_dev = usbd_init(&stm32f0x2_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 }
 
