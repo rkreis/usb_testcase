@@ -163,9 +163,9 @@ static const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-	"Uni Bremen",
-	"UWB module",
-	"spi2usb",
+	"Generic",
+	"libopencm3 USB test case",
+	"usb_testcase",
 };
 
 /* Buffer to be used for control requests. */
