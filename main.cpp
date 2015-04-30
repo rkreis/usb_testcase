@@ -8,11 +8,13 @@
 #include <libopencm3/stm32/f0/crs.h>
 
 #define PWR_CR MMIO32(POWER_CONTROL_BASE + 0x00)
+#define SYSCFG_CFGR3 MMIO32(0x40010000 + 0x20)
 
 #include "usb_cdc.h"
 
 extern "C" {
 	void usb_rx(char *data, int len) {
+		usb_tx("OK!\n", 4);
 		gpio_toggle(GPIOA, GPIO10);
 	}
 }
@@ -20,9 +22,10 @@ extern "C" {
 int main() {
 	// disable JTAG?
 	// clock: 2MHz MSI
-	
+
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_SYSCFG);
 
 	// GPIOA
 	//  0: unused
@@ -64,10 +67,23 @@ int main() {
 	//PWR_CR = (1<<14) | (3<<11) | (1<<9) | (1<<8) | (1<<1) | (1<<0);
 	//PWR_CR = (3<<11) | (1<<8) | (1<<1) | (1<<0);
 
-	RCC_CRRCR = RCC_CRRCR_HSI48ON; // TODO auf ready warten
-	RCC_CCIPR = RCC_CCIPR_HSI48SEL;
+	rcc_osc_on(HSI16);
+	rcc_wait_for_osc_ready(HSI16);
+	RCC_CFGR = RCC_CFGR_SW_SYSCLKSEL_HSI16CLK;
+
+	// Enable VREFINT for HSI48.
+	SYSCFG_CFGR3 |= (1 << 13) | (1 << 0); // ENREF_HSI48, EN_VREFINT
+	while(!(SYSCFG_CFGR3 & (1 << 26))); // REF_HSI48_RDYF
+
+	// Enable HSI48.
+	RCC_CRRCR |= 1 << 0; // HSI48ON
+	while(!(RCC_CRRCR & (1 << 1))); // HSI48RDY
+
+	// TODO figure out if the CRS actually works?
+	//rcc_periph_clock_enable(RCC_CRS);
 	//CRS_CR = CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
-	//CRS_CFGR = 0x2022BB7F; // default
+
+	RCC_CCIPR = RCC_CCIPR_HSI48SEL;
 
 	/*
 	RTC_WPR = 0xCA;
@@ -81,12 +97,6 @@ int main() {
 	*/
 
 	gpio_set(GPIOA, GPIO10);
-
-	rcc_osc_on(HSI16);
-	rcc_wait_for_osc_ready(HSI16);
-	RCC_CFGR = RCC_CFGR_SW_SYSCLKSEL_HSI16CLK;
-
-	for(volatile int i = 0; i < 1000; ++i);
 
 	usb_init();
 	while(true) {
