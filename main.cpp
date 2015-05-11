@@ -2,7 +2,6 @@
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/l0/rcc.h>
-#include <libopencm3/stm32/usb.h>
 
 // hack!
 #define LIBOPENCM3_RTC_H
@@ -71,7 +70,6 @@ int main() {
 	asm volatile("cpsid i");
 
 	// prepare wakeup events
-	USB_CNTR |= USB_CNTR_RESETM | USB_CNTR_CTRM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_SOFM;
 	nvic_enable_irq(NVIC_USB_IRQ);
 
 	usb_init();
