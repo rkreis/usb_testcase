@@ -1,5 +1,6 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/common.h>
+#include <libopencm3/stm32/dbgmcu.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/l0/rcc.h>
 
@@ -30,7 +31,11 @@ int main() {
 
 	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_ALL);
 	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO9 | GPIO10);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO13 | GPIO14);
 	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_ALL);
+
+	// enable debugging during wfi
+	DBGMCU_CR = DBGMCU_CR_STANDBY | DBGMCU_CR_STOP | DBGMCU_CR_SLEEP;
 
 	//PWR_CR = (1<<14) | (3<<11) | (1<<9) | (1<<8) | (1<<1) | (1<<0);
 	//PWR_CR = (3<<11) | (1<<8) | (1<<1) | (1<<0);
