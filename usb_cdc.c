@@ -21,6 +21,7 @@
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/usb.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
@@ -240,10 +241,21 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 
 static usbd_device *usbd_dev;
 
+static void cdcacm_suspend(void) {
+	USB_CNTR |= USB_CNTR_FSUSP;
+}
+
+static void cdcacm_wakeup(void) {
+	USB_CNTR &= ~USB_CNTR_FSUSP;
+}
+
+
 void usb_init(void) {
 	rcc_periph_clock_enable(RCC_USB);
 	usbd_dev = usbd_init(&stm32f0x2_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+	usbd_register_suspend_callback(usbd_dev, cdcacm_suspend);
+	usbd_register_resume_callback(usbd_dev, cdcacm_wakeup);
 }
 
 void usb_poll(void) {
