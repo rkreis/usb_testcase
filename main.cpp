@@ -1,10 +1,11 @@
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/l0/rcc.h>
+#include <libopencm3/stm32/usb.h>
 
 // hack!
 #define LIBOPENCM3_RTC_H
-#include <libopencm3/stm32/common/rtc_common_l1f024.h>
 #include <libopencm3/stm32/f0/crs.h>
 
 #define PWR_CR MMIO32(POWER_CONTROL_BASE + 0x00)
@@ -16,53 +17,21 @@ extern "C" {
 	void usb_rx(char *data, int len) {
 		usb_tx("OK!\n", 4);
 		gpio_toggle(GPIOA, GPIO10);
+		if(len == 1 && *data == '!')
+			while(true);
 	}
 }
 
 int main() {
-	// disable JTAG?
-	// clock: 2MHz MSI
-
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_SYSCFG);
 
-	// GPIOA
-	//  0: unused
-	//  1: unused
-	//  2: unused
-	//  3: unused
-	//  4: dw1k IRQ
-	//  5: dw1k SPICLK
-	//  6: dw1k SPIMISO
-	//  7: dw1k SPIMOSI
-	//  8: sensor on/off
-	//  9: LED1
-	// 10: LED2
-	// 11: USB D-
-	// 12: USB D+
-	// 13: SWD CLK
-	// 14: SWD DIO
-	// 15: sensor 32kHz
-
-	// GPIOB
-	//  0: dw1k SPICS
-	//  1: unused
-	//  3: SCK
-	//  4: MISO
-	//  5: MOSI
-	//  6: SCL
-	//  7: SDA
+	// LEDs at PA9,10; USB at PA11,12, others input with pulldown
 
 	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_ALL);
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO5 | GPIO6 | GPIO7 | GPIO11 | GPIO12 | GPIO13 | GPIO14);
-	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO4);
-	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9 | GPIO10 | GPIO15);
-	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_HIGH, GPIO5 | GPIO7);
-
+	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO9 | GPIO10);
 	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_ALL);
-	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0);
-	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_HIGH, GPIO0);
 
 	//PWR_CR = (1<<14) | (3<<11) | (1<<9) | (1<<8) | (1<<1) | (1<<0);
 	//PWR_CR = (3<<11) | (1<<8) | (1<<1) | (1<<0);
@@ -98,10 +67,18 @@ int main() {
 
 	gpio_set(GPIOA, GPIO10);
 
+	// make sure we never get interrupts
+	asm volatile("cpsid i");
+
+	// prepare wakeup events
+	USB_CNTR |= USB_CNTR_RESETM | USB_CNTR_CTRM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_SOFM;
+	nvic_enable_irq(NVIC_USB_IRQ);
+
 	usb_init();
 	while(true) {
-		gpio_toggle(GPIOA, GPIO9);
+		asm volatile("wfi");
 		usb_poll();
-		//usb_tx("OHAI\n", 5);
+		nvic_clear_pending_irq(NVIC_USB_IRQ);
+		gpio_toggle(GPIOA, GPIO9);
 	}
 }
